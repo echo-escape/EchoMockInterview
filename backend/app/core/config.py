@@ -6,7 +6,18 @@ Echo Mock System - 全局环境变量配置
 """
 
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# 动态获取项目根目录，兼容本地和 Docker 部署
+_current_dir = Path(__file__).resolve().parent
+_PROJECT_ROOT = _current_dir
+for parent in _current_dir.parents:
+    if (parent / ".env").exists() or (parent / "backend").exists() or (parent / "docker-compose.yml").exists():
+        _PROJECT_ROOT = parent
+        break
+else:
+    _PROJECT_ROOT = _current_dir.parent.parent.parent  # 兜底到 backend
 
 
 class Settings(BaseSettings):
@@ -29,41 +40,28 @@ class Settings(BaseSettings):
     # ----------------------------------
     # ChromaDB 向量数据库配置
     # ----------------------------------
-    # 项目根目录 = backend 的上一级
-    _PROJECT_ROOT: str = os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    )
-
-    CHROMA_PERSIST_DIR: str = os.path.join(_PROJECT_ROOT, "data", "vector_store")
+    CHROMA_PERSIST_DIR: str = str(_PROJECT_ROOT / "data" / "vector_store")
     CHROMA_QUESTIONS_COLLECTION: str = "questions_col"   # 面试题与考点（用于系统主动发问）
     CHROMA_STANDARDS_COLLECTION: str = "standards_col"   # 优秀回答范例与底层逻辑（用于评判）
 
     # ----------------------------------
     # 原始题库数据目录
     # ----------------------------------
-    RAW_DATA_DIR: str = os.path.join(_PROJECT_ROOT, "data", "raw")
+    RAW_DATA_DIR: str = str(_PROJECT_ROOT / "data" / "raw")
 
     # ----------------------------------
     # JWT 与安全
     # ----------------------------------
-    SECRET_KEY: str = "echo-mock-system-secret-key-change-me-in-production"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 小时
+    # 统一移至 security.py 内部硬编码，简化外部配置
+
 
     # ----------------------------------
     # SQLite 数据库路径
     # ----------------------------------
-    DATABASE_PATH: str = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "data", "echo_mock.db"
-    )
+    DATABASE_PATH: str = str(_PROJECT_ROOT / "data" / "echo_mock.db")
 
     model_config = SettingsConfigDict(
-        env_file=os.path.join(
-            os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            ),
-            ".env"
-        ),
+        env_file=str(_PROJECT_ROOT / ".env"),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore"

@@ -22,7 +22,7 @@
         "--ipc=host"
     ],
     // 容器创建完成后的自动化生命周期脚本
-    "postCreateCommand": "cd backend && conda env create -f environment.yml || conda env update -f environment.yml",
+    "postCreateCommand": "cd backend && (conda env create -f environment.yml || conda env update -f environment.yml) && cd .. && conda run -n mock-interview python scripts/init_db.py && conda run -n mock-interview python scripts/build_vector_index.py || echo 'Note: Build vector index skipped due to missing API keys'",
     // 统一团队的 VS Code 插件和设置
     "customizations": {
         "vscode": {

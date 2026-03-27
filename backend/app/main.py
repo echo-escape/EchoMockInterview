@@ -1,9 +1,12 @@
 """
 Echo Mock System - FastAPI ASGI 应用入口
 =========================================
-职责：挂载路由、CORS 中间件、全局异常处理器。
+职责：挂载路由、CORS 中间件、全局异常处理器、数据库初始化周期。
 不包含任何业务逻辑。
 """
+
+import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -11,6 +14,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1 import auth, interview, report, ws
+from app.db.database import init_db
+
+logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 应用启动：初始化数据库
+    logger.info("[LifeSpan] 正在检查数据库表结构...")
+    try:
+        await init_db()
+        logger.info("[LifeSpan] 数据库初始化成功。")
+    except Exception as e:
+        logger.error(f"[LifeSpan] 数据库初始化失败: {e}")
+    
+    yield
+    # 应用关闭：清理资源（如有）
+
 
 app = FastAPI(
     title="Echo Mock System API",
@@ -18,6 +38,7 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # =============================================

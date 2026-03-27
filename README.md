@@ -30,45 +30,31 @@ Echo Mock System 是一个由 AI 驱动的沉浸式模拟面试平台。结合 R
 3. 首次构建会通过 `.devcontainer/Dockerfile` 拉取包含 `Miniconda` 和底层 C/C++ 音频环境的定制镜像，请耐心等待。
 4. 容器内已配置统一插件套件（内置 Volar，Pylance，Prettier，ESLint），无需手动干预。
 
+### ⚠️ Windows 协作注意事项 (Windows Compatibility)
+
+由于 Windows 和 Linux 处理换行符（CRLF vs LF）的方式不同，请务必注意：
+- **Git 配置**: 执行 `git config --global core.autocrlf true`（或克隆时确保使用 LF）。项目已内置 `.gitattributes` 强制执行 LF。
+- **WSL 2**: 确保 Docker Desktop 已开启 **WSL 2 Backend**。
+- **GPU 支持**: Windows 用户需在宿主机安装 **NVIDIA 驱动** 并确保 WSL 2 内部能识别显卡（运行 `nvidia-smi`），否则 DevContainer 启动时 `--gpus all` 参数会报错。如果不需要 GPU，可手动修改 `.devcontainer/devcontainer.json` 中的 `runArgs` 暂时移除该参数。
+- **权限问题**: 如果在克隆目录下遇到权限报错，尝试在 WSL 2 的原生文件系统（如 `~/projects/`）中进行 clone。
+
 ### 3. 项目运行与功能调试
 
-进入容器终端，环境已经备妥：
+进入容器终端，环境已经通过 `postCreateCommand` 自动拉起。你可以选择一键启动或分模块调试：
 
-- **自动化配置**: 系统创建后会触发 `postCreateCommand`，自动在 `backend` 目录下通过 Conda 和 `environment.yml` （如果存在）自动构建好 Python 专属支持栈。
-- **启动前端**: 
+- **一键启动 (推荐)**: 
+  在项目根目录下执行：
   ```bash
-  cd frontend
-  # 预装 pnpm 全局运行环境
-  pnpm install
-  pnpm run dev
-  # 服务将自动通过内建 forwardPorts 映射到本地测试端口 5173 
+  bash scripts/run_dev.sh
   ```
-- **启动后端**: 
-  ```bash
-  cd backend
-  conda activate mock-interview   
-  uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-  ```
+  该脚本会同时拉起前端和后端服务，并在你按下 `Ctrl+C` 时统一关闭。
 
----
+- **手动分模块启动**: 
+  - **后端**: `cd backend && conda activate mock-interview && uvicorn app.main:app --reload` (数据库表会在启动时**自动创建**)
+  - **前端**: `cd frontend && pnpm install && pnpm dev`
 
-## 🚀 生产环境部署 (Docker Compose)
-
-当需要将系统整体上线部署至集群节点或云服务器时，推荐使用项目预置的编排组合（包含 Redis、PG 库等全流程联动）：
-
-```bash
-# 1. 确保已复制环境变量凭证，并配置好您的核心云端大模型 API 及授权池
-cp .env.example .env
-
-# 2. 一键拉起微服务集群
-docker-compose up -d --build
-```
-
-系统编排就绪后将对外暴露：
-- 🌐 前台面试环境: [http://localhost:5173](http://localhost:5173)
-- ⚙️ 后端 API 文档门户: [http://localhost:8000/docs](http://localhost:8000/docs)
-
----
+> [!TIP]
+> 数据库初始化现在已经完全自动化。如果需要重新打底向量索引，请手动运行 `python scripts/build_vector_index.py`。
 
 ## 🧩 初始化题库与向量核心
 

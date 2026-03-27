@@ -7,12 +7,12 @@ Echo Mock System - SQLite 异步数据库引擎
 import os
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy import event
+from app.core.config import settings
 
 # ------------------------------------
 # 数据库路径配置
 # ------------------------------------
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DB_PATH = os.path.join(BASE_DIR, "data", "echo_mock.db")
+DB_PATH = settings.DATABASE_PATH
 
 # 确保 data 目录存在
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -56,6 +56,14 @@ async_session_factory = async_sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False,  # 提交后不过期对象，避免惰性加载在异步上下文中报错
 )
+
+
+async def init_db():
+    """自动化建表逻辑，供应用启动时调用"""
+    from app.db.models import Base
+    async with engine.begin() as conn:
+        # 使用 run_sync 运行同步的 create_all
+        await conn.run_sync(Base.metadata.create_all)
 
 
 async def get_db() -> AsyncSession:
