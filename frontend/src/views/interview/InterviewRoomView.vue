@@ -80,15 +80,22 @@ const handleSendText = () => {
   const text = inputText.value.trim()
   if (!text) return
 
-  messages.value.push({
+  const localMsg = {
     id: Date.now().toString(),
     speaker: 'USER',
     content: text,
     isStreaming: false
-  })
+  }
+  messages.value.push(localMsg)
 
-  sendMessage('text_message', { text })
-  inputText.value = ''
+  const sent = sendMessage('text_message', { text })
+  if (sent) {
+    inputText.value = ''
+  } else {
+    // 发送失败：移除本地消息，保留输入内容
+    messages.value = messages.value.filter(m => m.id !== localMsg.id)
+    console.warn('[Interview] 消息发送失败，请检查连接状态')
+  }
 }
 
 const scrollToBottom = async () => {
@@ -153,7 +160,7 @@ onMounted(() => {
           @stop-record="handleSendAudio"
         />
 
-        <div class="text-input-wrap" v-if="isConnected && status.status === 'listening'">
+        <div class="text-input-wrap" v-if="isConnected && (status.status === 'listening' || status.status === 'thinking')">
           <input 
             v-model="inputText" 
             @keyup.enter="handleSendText"

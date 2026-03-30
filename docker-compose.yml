@@ -9,8 +9,11 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      # Optional: Mount a directory for persistent data, like sqlite DB or chroma
       - ./data:/app/data
+      # Prevent host node_modules (if any) from overriding container ones if there were any, 
+      # but backend doesn't use node_modules, it uses pip.
+    env_file:
+      - .env
     deploy:
       resources:
         reservations:
@@ -20,25 +23,29 @@ services:
               capabilities: [gpu]
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      # Add necessary environment variables here (.env file also works)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   frontend:
-    image: node:20
-    working_dir: /app
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/app
-    # Runs Vite development server
-    command: bash -c "npm install -g pnpm && pnpm install && pnpm dev --host 0.0.0.0"
+      - /app/node_modules # Anonymous volume to preserve container node_modules
     environment:
-      - VITE_API_URL=http://backend:8000
+      - VITE_API_URL=http://localhost:8000
+    env_file:
+      - .env
     depends_on:
       backend:
         condition: service_healthy
+
+volumes:
+  data:

@@ -45,7 +45,7 @@ Echo Mock System 是一个由 AI 驱动的沉浸式模拟面试平台。结合 R
 - **一键启动 (推荐)**: 
   在项目根目录下执行：
   ```bash
-  bash scripts/run_dev.sh
+  bash deploy_scripts/run_dev.sh
   ```
   该脚本会同时拉起前端和后端服务，并在你按下 `Ctrl+C` 时统一关闭。
 
@@ -54,7 +54,7 @@ Echo Mock System 是一个由 AI 驱动的沉浸式模拟面试平台。结合 R
   - **前端**: `cd frontend && pnpm install && pnpm dev`
 
 > [!TIP]
-> 数据库初始化现在已经完全自动化。如果需要重新打底向量索引，请手动运行 `python scripts/build_vector_index.py`。
+> 数据库初始化现在已经完全自动化。如果需要重新打底向量索引，请手动运行 `python deploy_scripts/build_vector_index.py`。
 
 ## 🧩 初始化题库与向量核心
 
@@ -62,10 +62,10 @@ Echo Mock System 是一个由 AI 驱动的沉浸式模拟面试平台。结合 R
 
 ```bash
 # 自动建表（User、对话 Session、各项评测维度的细粒度维度 DimensionScore 表等）
-python scripts/init_db.py
+python deploy_scripts/init_db.py
 
 # 读取 /data/raw/*.md 将考点全量向量化为 ChromaDB 离线知识索引
-python scripts/build_vector_index.py
+python deploy_scripts/build_vector_index.py
 ```
 
 ---

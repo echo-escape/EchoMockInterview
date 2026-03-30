@@ -78,10 +78,10 @@
 cd ..
 
 # 初始化数据库表
-python scripts/init_db.py
+python deploy_scripts/init_db.py
 
 # 构建向量知识库索引 (需确保 data/raw 下有数据)
-python scripts/build_vector_index.py
+python deploy_scripts/build_vector_index.py
 ```
 
 ### 2.4 启动后端服务

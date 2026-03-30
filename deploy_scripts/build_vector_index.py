@@ -2,7 +2,7 @@
 Echo Mock System - 离线向量索引构建脚本
 ========================================
 运行方式（在项目根目录下执行）：
-    python scripts/build_vector_index.py
+    python deploy_scripts/build_vector_index.py
 
 功能：
     解析 data/raw/ 下的 Markdown/PDF/TXT 文件，

@@ -29,7 +29,7 @@ def main():
 
     if not os.path.exists(test_audio_path):
         print(f"❌ 找不到测试音频文件: {test_audio_path}")
-        print("请确认已经执行过了 python scripts/init_sensevoice.py")
+        print("请确认已经执行过了 python deploy_scripts/init_sensevoice.py")
         sys.exit(1)
 
     print(f"[1/3] 正在挂载 SenseVoice 模型到显存 (只在初次拉起时耗时)...\n")

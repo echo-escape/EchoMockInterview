@@ -66,14 +66,24 @@ export function useWebSocket(sessionId: string) {
     }
   }
 
-  const sendMessage = (type: string, payload: any) => {
+  const sendMessage = (type: string, payload: any): boolean => {
     if (socket.value && isConnected.value) {
-      socket.value.send(JSON.stringify({
-        session_id: sessionId,
-        type,
-        payload
-      }))
+      try {
+        socket.value.send(JSON.stringify({
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          session_id: sessionId,
+          type,
+          payload
+        }))
+        return true
+      } catch (e) {
+        console.error('[WS] Send failed:', e)
+        return false
+      }
     }
+    console.warn('[WS] Cannot send — not connected')
+    return false
   }
 
   const disconnect = () => {

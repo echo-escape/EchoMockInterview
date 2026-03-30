@@ -2,7 +2,7 @@
 Echo Mock System - 数据库初始化脚本
 ====================================
 运行方式（在项目根目录下执行）：
-    python scripts/init_db.py
+    python deploy_scripts/init_db.py
 
 功能：
     1. 根据 models.py 中的 ORM 定义，自动创建全部数据表。
