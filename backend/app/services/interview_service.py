@@ -14,8 +14,19 @@ from app.db.models import InterviewSession
 
 class InterviewService:
     @staticmethod
-    async def create_session(db: AsyncSession, user_id: int, target_role: str) -> InterviewSession:
-        session = InterviewSession(user_id=user_id, target_role=target_role)
+    async def create_session(
+        db: AsyncSession,
+        user_id: int,
+        target_role: str,
+        resume_text: Optional[str] = None,
+        resume_file_name: Optional[str] = None,
+    ) -> InterviewSession:
+        session = InterviewSession(
+            user_id=user_id,
+            target_role=target_role,
+            resume_text=resume_text,
+            resume_file_name=resume_file_name,
+        )
         db.add(session)
         await db.flush()
         return session

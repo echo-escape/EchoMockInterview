@@ -36,19 +36,12 @@ def mock_all_ai_engines():
             mock_stream_response = AsyncMock()
             
             # 手打一个异步生成器
-            async def mock_async_generator():
-                class Chunk:
-                    def __init__(self, text):
-                        self.text = text
-                yield Chunk("你")
-                yield Chunk("好")
-                yield Chunk("呀")
+            async def mock_async_generator(*args, **kwargs):
+                yield "你"
+                yield "好"
+                yield "呀"
             
-            mock_stream_response.return_value = mock_async_generator()
-            
-            mock_model = AsyncMock()
-            mock_model.generate_content_async = mock_stream_response
-            mock_llm_client.model = mock_model
+            mock_llm_client.chat_stream = mock_async_generator
             
             # 3. Mock RAG Retriever
             with patch("app.services.ws_manager.dual_retriever") as mock_rag:
@@ -58,20 +51,24 @@ def mock_all_ai_engines():
                 # 4. Mock Background Task (Celery/Librosa)
                 with patch("app.services.ws_manager.analyze_and_save_audio_metrics") as mock_delay:
                     
-                    # 5. Mock DB Factory (以访真正的 DB 操作)
-                    with patch("app.services.ws_manager.async_session_factory") as mock_db_factory:
-                        mock_session = AsyncMock(spec=AsyncSession)
-                        # 支持 async with
-                        mock_db_factory.return_value.__aenter__.return_value = mock_session
-                        mock_db_factory.return_value.__aexit__.return_value = False
+                    # 4.5 Mock FFmpeg convert to avoid invalid webm error
+                    with patch("app.services.ws_manager._convert_to_wav") as mock_convert:
+                        mock_convert.return_value = b"fake wav audio"
                         
-                        yield {
-                            "asr": mock_asr,
-                            "llm": mock_llm_client,
-                            "rag": mock_rag,
-                            "audio_metrics": mock_delay,
-                            "db": mock_session
-                        }
+                        # 5. Mock DB Factory (以访真正的 DB 操作)
+                        with patch("app.services.ws_manager.async_session_factory") as mock_db_factory:
+                            mock_session = AsyncMock(spec=AsyncSession)
+                            # 支持 async with
+                            mock_db_factory.return_value.__aenter__.return_value = mock_session
+                            mock_db_factory.return_value.__aexit__.return_value = False
+                            
+                            yield {
+                                "asr": mock_asr,
+                                "llm": mock_llm_client,
+                                "rag": mock_rag,
+                                "audio_metrics": mock_delay,
+                                "db": mock_session
+                            }
 
 # ===============================================
 # 2. 核心路由 WebSocket 测试

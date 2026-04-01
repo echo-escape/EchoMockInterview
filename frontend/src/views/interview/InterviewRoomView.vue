@@ -128,6 +128,9 @@ onMounted(() => {
         <button @click="router.push('/dashboard')" class="btn-back">← 返回</button>
         <div class="interview-meta" v-if="interviewInfo">
           <span class="role-name">{{ interviewInfo.target_role }}</span>
+          <span class="badge resume-badge" v-if="interviewInfo.has_resume">
+            <span class="badge-icon">📄</span> 已附简历
+          </span>
           <span class="dot">•</span>
           <span class="session-label">面试场次 #{{ sessionId.slice(0,8) }}</span>
         </div>
@@ -258,6 +261,22 @@ onMounted(() => {
 .session-label {
   color: var(--color-text-secondary);
   font-size: 13px;
+}
+
+.resume-badge {
+  background: rgba(61, 127, 255, 0.1);
+  color: var(--color-accent);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-icon {
+  font-size: 12px;
 }
 
 .status-indicator {

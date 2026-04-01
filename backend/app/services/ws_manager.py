@@ -28,7 +28,7 @@ from app.schemas.ws import (
     WsServerMessage,
 )
 from app.db.database import async_session_factory
-from app.db.models import DialogueMessage, QaEvaluation
+from app.db.models import DialogueMessage, InterviewSession, QaEvaluation
 
 # ai engine
 from app.ai_engine.multimodal.asr import SenseVoiceEngine
@@ -47,8 +47,9 @@ asr_engine_instance = None
 
 class InterviewSessionContext:
     """包装单个活跃 WebSocket 的 AI 内存树和流控开关。"""
-    def __init__(self, target_role: str):
+    def __init__(self, target_role: str, resume_text: str = ""):
         self.target_role = target_role
+        self.resume_text = resume_text
         self.state_machine = InterviewStateMachine(target_role)
         self.memory = MemoryManager()
         self.history = []
@@ -131,14 +132,22 @@ class ConnectionManager:
             except RuntimeError:
                 pass
 
-    def init_context(self, session_id: str, target_role: str):
-        self._contexts[session_id] = InterviewSessionContext(target_role)
+    def init_context(self, session_id: str, target_role: str, resume_text: str = ""):
+        self._contexts[session_id] = InterviewSessionContext(target_role, resume_text)
 
     def get_context(self, session_id: str) -> Optional[InterviewSessionContext]:
         return self._contexts.get(session_id)
 
     async def handle_start_interview(self, session_id: str, payload: StartInterviewPayload):
-        self.init_context(session_id, payload.target_role)
+        # 从数据库读取简历文本
+        resume_text = ""
+        async with async_session_factory() as db:
+            session_obj = await db.get(InterviewSession, session_id)
+            if session_obj and session_obj.resume_text:
+                resume_text = session_obj.resume_text
+                logger.info(f"[WS Service] 已加载简历 ({len(resume_text)} 字符) for session={session_id}")
+
+        self.init_context(session_id, payload.target_role, resume_text)
         ctx = self.get_context(session_id)
         
         await self.send(
@@ -149,7 +158,7 @@ class ConnectionManager:
             )
         )
         
-        stage, sys_prompt = ctx.state_machine.get_stage_prompt(ctx.current_round)
+        stage, sys_prompt = ctx.state_machine.get_stage_prompt(ctx.current_round, ctx.resume_text)
         await self._stream_llm_response(session_id, ctx, sys_prompt)
 
 
@@ -230,7 +239,7 @@ class ConnectionManager:
         asyncio.create_task(self._async_eval_single(eval_id, ctx.current_question, user_text))
 
         ctx.current_round += 1
-        stage, raw_sys_prompt = ctx.state_machine.get_stage_prompt(ctx.current_round)
+        stage, raw_sys_prompt = ctx.state_machine.get_stage_prompt(ctx.current_round, ctx.resume_text)
 
         sys_prompt = raw_sys_prompt
         if "{retrieved_questions}" in raw_sys_prompt:
@@ -286,7 +295,7 @@ class ConnectionManager:
         asyncio.create_task(self._async_eval_single(eval_id, ctx.current_question, user_text))
 
         ctx.current_round += 1
-        stage, raw_sys_prompt = ctx.state_machine.get_stage_prompt(ctx.current_round)
+        stage, raw_sys_prompt = ctx.state_machine.get_stage_prompt(ctx.current_round, ctx.resume_text)
 
         sys_prompt = raw_sys_prompt
         if "{retrieved_questions}" in raw_sys_prompt:

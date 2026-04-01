@@ -7,26 +7,40 @@ GET  /api/v1/interviews/            - 获取当前用户的面试历史列表
 GET  /api/v1/interviews/{session_id} - 获取单个场次详情（含对话记录）
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.db.models import User
-from app.schemas.interview import InterviewBrief, InterviewCreateRequest, InterviewDetail
+from app.schemas.interview import InterviewBrief, InterviewDetail
 from app.services.interview_service import InterviewService
+from app.services.resume_parser import parse_resume
 
 router = APIRouter(prefix="/interviews", tags=["面试场次"])
 
 
 @router.post("/", response_model=InterviewBrief, status_code=status.HTTP_201_CREATED)
 async def create_interview(
-    body: InterviewCreateRequest,
+    target_role: str = Form(..., description="目标岗位"),
+    resume: UploadFile | None = File(None, description="简历文件（PDF/DOCX，可选）"),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """创建一个新的面试场次。"""
-    return await InterviewService.create_session(db, user.id, body.target_role)
+    """创建一个新的面试场次，可选上传简历文件。"""
+    resume_text = None
+    resume_file_name = None
+
+    if resume and resume.filename:
+        file_bytes = await resume.read()
+        resume_text = parse_resume(file_bytes, resume.filename)
+        resume_file_name = resume.filename
+
+    return await InterviewService.create_session(
+        db, user.id, target_role,
+        resume_text=resume_text,
+        resume_file_name=resume_file_name,
+    )
 
 
 @router.get("/", response_model=list[InterviewBrief])

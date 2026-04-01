@@ -101,6 +101,8 @@ class InterviewSession(Base):
     dimension_scores = Column(JSON, nullable=True, comment="多维度能力得分（结构化数据，供 ECharts 渲染）")
     comprehensive_report = Column(Text, nullable=True, comment="大模型生成的最终整体评价与建议")
     is_favorite = Column(Boolean, default=False, comment="是否收藏")
+    resume_text = Column(Text, nullable=True, comment="解析后的简历纯文本")
+    resume_file_name = Column(String(256), nullable=True, comment="原始简历文件名")
 
     # 关联关系
     user = relationship("User", back_populates="sessions")

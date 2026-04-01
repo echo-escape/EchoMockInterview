@@ -5,7 +5,7 @@ Echo Mock System - 面试场次相关 Pydantic 模型
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # =============================================
@@ -29,6 +29,19 @@ class InterviewBrief(BaseModel):
     end_time: Optional[datetime] = None
     overall_score: Optional[float] = None
     is_favorite: bool = False
+    has_resume: bool = False
+
+    @model_validator(mode='before')
+    @classmethod
+    def compute_has_resume(cls, data):
+        """从 ORM 对象的 resume_text 字段计算 has_resume。"""
+        if hasattr(data, 'resume_text'):
+            data_dict = {c.key: getattr(data, c.key) for c in data.__table__.columns}
+            data_dict['has_resume'] = bool(data.resume_text)
+            return data_dict
+        if isinstance(data, dict):
+            data['has_resume'] = bool(data.get('resume_text'))
+        return data
 
     class Config:
         from_attributes = True
@@ -43,9 +56,22 @@ class InterviewDetail(BaseModel):
     end_time: Optional[datetime] = None
     overall_score: Optional[float] = None
     is_favorite: bool = False
+    has_resume: bool = False
+    resume_file_name: Optional[str] = None
     dimension_scores: Optional[Dict[str, Any]] = None
     comprehensive_report: Optional[str] = None
     messages: List["MessageItem"] = []
+
+    @model_validator(mode='before')
+    @classmethod
+    def compute_has_resume(cls, data):
+        if hasattr(data, 'resume_text'):
+            data_dict = {c.key: getattr(data, c.key) for c in data.__table__.columns}
+            data_dict['has_resume'] = bool(data.resume_text)
+            return data_dict
+        if isinstance(data, dict):
+            data['has_resume'] = bool(data.get('resume_text'))
+        return data
 
     class Config:
         from_attributes = True

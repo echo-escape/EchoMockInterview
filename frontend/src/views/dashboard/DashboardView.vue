@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../store/auth'
 import { listInterviews, createInterview, deleteInterview, toggleFavorite } from '../../api/interview'
@@ -12,6 +12,17 @@ const interviews = ref<any[]>([])
 const loading = ref(false)
 const targetRole = ref('')
 const creating = ref(false)
+const resumeFile = ref<File | null>(null)
+const isDragOver = ref(false)
+
+const resumeInfo = computed(() => {
+  if (!resumeFile.value) return null
+  const size = resumeFile.value.size
+  const sizeStr = size < 1024 * 1024
+    ? `${(size / 1024).toFixed(1)} KB`
+    : `${(size / 1024 / 1024).toFixed(1)} MB`
+  return { name: resumeFile.value.name, size: sizeStr }
+})
 
 const fetchInterviews = async () => {
   loading.value = true
@@ -29,15 +40,48 @@ const handleStartInterview = async () => {
   
   creating.value = true
   try {
-    const data: any = await createInterview({
-      target_role: targetRole.value
-    })
+    const data: any = await createInterview(
+      targetRole.value,
+      resumeFile.value || undefined
+    )
     router.push(`/interview/${data.id}`)
   } catch (error) {
     console.error('Failed to start interview:', error)
   } finally {
     creating.value = false
   }
+}
+
+const handleFileSelect = (e: Event) => {
+  const input = e.target as HTMLInputElement
+  if (input.files?.[0]) {
+    validateAndSetFile(input.files[0])
+  }
+}
+
+const handleDrop = (e: DragEvent) => {
+  isDragOver.value = false
+  const file = e.dataTransfer?.files?.[0]
+  if (file) {
+    validateAndSetFile(file)
+  }
+}
+
+const validateAndSetFile = (file: File) => {
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (!['pdf', 'docx'].includes(ext || '')) {
+    alert('仅支持 PDF 和 DOCX 格式')
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    alert('文件大小不能超过 5MB')
+    return
+  }
+  resumeFile.value = file
+}
+
+const removeFile = () => {
+  resumeFile.value = null
 }
 
 const handleLogout = () => {
@@ -97,6 +141,44 @@ onMounted(() => {
           <button @click="handleStartInterview" class="btn-primary" :disabled="creating">
             {{ creating ? '创建中...' : '开始模拟面试' }}
           </button>
+        </div>
+
+        <!-- Resume Upload Area -->
+        <div class="upload-section">
+          <div 
+            v-if="!resumeFile"
+            class="upload-dropzone"
+            :class="{ 'drag-over': isDragOver }"
+            @click="($refs.fileInput as HTMLInputElement).click()"
+            @dragover.prevent="isDragOver = true"
+            @dragleave="isDragOver = false"
+            @drop.prevent="handleDrop"
+          >
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">
+              <span class="upload-main-text">上传简历（可选）</span>
+              <span class="upload-hint">拖拽文件到此处，或点击选择 · 支持 PDF / DOCX · 最大 5MB</span>
+            </div>
+          </div>
+
+          <div v-else class="file-preview">
+            <div class="file-info">
+              <span class="file-icon">📎</span>
+              <div class="file-details">
+                <span class="file-name">{{ resumeInfo?.name }}</span>
+                <span class="file-size">{{ resumeInfo?.size }}</span>
+              </div>
+            </div>
+            <button class="btn-remove-file" @click="removeFile" title="移除简历">✕</button>
+          </div>
+
+          <input 
+            ref="fileInput"
+            type="file" 
+            accept=".pdf,.docx"
+            style="display: none"
+            @change="handleFileSelect"
+          />
         </div>
       </section>
 
@@ -204,6 +286,124 @@ onMounted(() => {
   margin: 0 auto;
 }
 
+/* ===== Resume Upload ===== */
+.upload-section {
+  max-width: 600px;
+  margin: 20px auto 0;
+}
+
+.upload-dropzone {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md, 12px);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.upload-dropzone:hover {
+  border-color: var(--color-accent);
+  background: rgba(61, 127, 255, 0.04);
+}
+
+.upload-dropzone.drag-over {
+  border-color: var(--color-accent);
+  background: rgba(61, 127, 255, 0.08);
+  transform: scale(1.01);
+}
+
+.upload-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 4px;
+}
+
+.upload-main-text {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-primary);
+}
+
+.upload-hint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.file-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md, 12px);
+  background: rgba(61, 127, 255, 0.06);
+  animation: fadeSlideIn 0.3s ease;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-icon {
+  font-size: 20px;
+}
+
+.file-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.file-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-primary);
+}
+
+.file-size {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.btn-remove-file {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-remove-file:hover {
+  background: rgba(255, 77, 79, 0.1);
+  color: #ff4d4f;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== History Section ===== */
 .history-list {
   display: flex;
   flex-direction: column;

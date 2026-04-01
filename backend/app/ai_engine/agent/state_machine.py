@@ -8,7 +8,7 @@ Echo Mock System - Agent 状态机与生命周期管理
 import logging
 from typing import Tuple
 
-from app.ai_engine.rag.prompts import STAGE_PROMPTS, INTERVIEWER_SYSTEM_PROMPT
+from app.ai_engine.rag.prompts import STAGE_PROMPTS, INTERVIEWER_SYSTEM_PROMPT, RESUME_CONTEXT_BLOCK
 
 logger = logging.getLogger(__name__)
 
@@ -48,21 +48,31 @@ class InterviewStateMachine:
         else:
             return InterviewStage.REVERSE_QA
 
-    def get_stage_prompt(self, current_round: int) -> Tuple[str, str]:
+    def get_stage_prompt(self, current_round: int, resume_text: str = "") -> Tuple[str, str]:
         """
         获取当前阶段的标识和构建好的 Prompt。
         注意: 如阶段包含 {retrieved_questions} 占位符，由调用方负责替换 RAG 知识。
+        
+        Args:
+            current_round: 当前对话轮次
+            resume_text: 候选人简历文本（可选）
         
         返回: (stage_name, full_system_prompt_string)
         """
         stage = self.get_current_stage(current_round)
         stage_template = STAGE_PROMPTS.get(stage, STAGE_PROMPTS[InterviewStage.ICEBREAK])
 
-        # 包装核心人设（强制注入目标岗位约束）
+        # 构建简历上下文
+        resume_context = ""
+        if resume_text:
+            resume_context = RESUME_CONTEXT_BLOCK.format(resume_text=resume_text)
+
+        # 包装核心人设（强制注入目标岗位约束 + 简历上下文）
         full_system_prompt = INTERVIEWER_SYSTEM_PROMPT.format(
             target_role=self.target_role,
-            current_stage=stage_template
+            current_stage=stage_template,
+            resume_context=resume_context,
         )
 
-        logger.debug(f"[StateMachine] 计算得出当前阶段: {stage} (Round {current_round})")
+        logger.debug(f"[StateMachine] 计算得出当前阶段: {stage} (Round {current_round}), 简历: {'有' if resume_text else '无'}")
         return stage, full_system_prompt

@@ -51,6 +51,7 @@ const formatDate = (dateStr: string) => {
     <div class="card-header">
       <div class="header-left">
         <span class="role-badge">{{ item.target_role }}</span>
+        <span v-if="item.has_resume" class="resume-badge" title="已上传简历">📄 简历</span>
         <span v-if="item.is_favorite" class="fav-star">★</span>
       </div>
       <div class="header-right">
@@ -194,6 +195,16 @@ const formatDate = (dateStr: string) => {
 .role-badge {
   font-weight: 700;
   font-size: 18px;
+}
+
+.resume-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(46, 160, 67, 0.1);
+  color: var(--color-success, #2ea043);
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .status-tag {

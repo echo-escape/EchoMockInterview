@@ -4,10 +4,6 @@
 
 import request from '../utils/request'
 
-export interface InterviewCreateRequest {
-  target_role: string
-}
-
 export interface InterviewBrief {
   id: string
   target_role: string
@@ -16,6 +12,7 @@ export interface InterviewBrief {
   end_time: string | null
   overall_score: number | null
   is_favorite: boolean
+  has_resume: boolean
 }
 
 export interface MessageItem {
@@ -30,12 +27,21 @@ export interface MessageItem {
 export interface InterviewDetail extends InterviewBrief {
   dimension_scores: Record<string, any> | null
   comprehensive_report: string | null
+  resume_file_name: string | null
   messages: MessageItem[]
 }
 
-/** 创建面试场次 */
-export const createInterview = (data: InterviewCreateRequest) =>
-  request.post<any, InterviewBrief>('/interviews/', data)
+/** 创建面试场次（支持可选简历上传） */
+export const createInterview = (targetRole: string, resumeFile?: File) => {
+  const formData = new FormData()
+  formData.append('target_role', targetRole)
+  if (resumeFile) {
+    formData.append('resume', resumeFile)
+  }
+  return request.post<any, InterviewBrief>('/interviews/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
 
 /** 获取面试历史列表 */
 export const listInterviews = () =>
