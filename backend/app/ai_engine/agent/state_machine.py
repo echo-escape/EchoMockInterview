@@ -8,7 +8,10 @@ Echo Mock System - Agent 状态机与生命周期管理
 import logging
 from typing import Tuple
 
-from app.ai_engine.rag.prompts import STAGE_PROMPTS, INTERVIEWER_SYSTEM_PROMPT, RESUME_CONTEXT_BLOCK
+from app.ai_engine.rag.prompts import (
+    STAGE_PROMPTS, INTERVIEWER_SYSTEM_PROMPT, RESUME_CONTEXT_BLOCK,
+    ICEBREAK_WITH_RESUME_AND_ROLE, ICEBREAK_WITH_RESUME_ONLY, ICEBREAK_WITH_ROLE_ONLY,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +64,29 @@ class InterviewStateMachine:
         """
         stage = self.get_current_stage(current_round)
         stage_template = STAGE_PROMPTS.get(stage, STAGE_PROMPTS[InterviewStage.ICEBREAK])
+
+        # 破冰阶段：根据「有无简历 × 有无岗位方向」选择合适的开场指令
+        if stage == InterviewStage.ICEBREAK:
+            has_resume = bool(resume_text and resume_text.strip())
+            has_role = bool(self.target_role and self.target_role.strip())
+
+            if has_resume and has_role:
+                icebreak_instruction = ICEBREAK_WITH_RESUME_AND_ROLE.format(
+                    target_role=self.target_role
+                )
+            elif has_resume and not has_role:
+                icebreak_instruction = ICEBREAK_WITH_RESUME_ONLY
+            elif has_role and not has_resume:
+                icebreak_instruction = ICEBREAK_WITH_ROLE_ONLY.format(
+                    target_role=self.target_role
+                )
+            else:
+                # 兜底：无简历无岗位，退回初始自我介绍提示
+                icebreak_instruction = (
+                    "- 请先通过一句轻松的寒暄破冰，然后请候选人介绍一个自己最有代表性的项目或技术经验。"
+                )
+
+            stage_template = stage_template.format(icebreak_instruction=icebreak_instruction)
 
         # 构建简历上下文
         resume_context = ""

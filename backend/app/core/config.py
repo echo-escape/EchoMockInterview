@@ -19,7 +19,12 @@ else:
     _PROJECT_ROOT = _current_dir
     # 向上寻找特征文件
     for parent in _current_dir.parents:
-        if (parent / ".env").exists() or (parent / "app").exists() or (parent / "docker-compose.yml").exists():
+        # 只用项目根目录才有的文件作为判断依据，避免 backend/app 的存在
+        # 导致 backend/ 被误识别为根目录
+        if (parent / "docker-compose.yml").exists() or (parent / ".env.example").exists():
+            _PROJECT_ROOT = parent
+            break
+        elif (parent / ".env").exists():
             _PROJECT_ROOT = parent
             break
     else:
