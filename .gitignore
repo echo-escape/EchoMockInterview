@@ -118,11 +118,16 @@ Thumbs.db
 # ==================================
 # Vector Store / Data 
 # ==================================
-# Ignore vector database index files and raw sensitive data
+# Ignore vector database index files
 data/vector_store/
-data/raw/
+# ALLOW raw question data (source of truth)
+!data/raw/
+# Ignore SQLite databases and log files
 *.sqlite3
 *.db
+*.db-shm
+*.db-wal
+data/*.db*
 
 # ==================================
 # Logs
