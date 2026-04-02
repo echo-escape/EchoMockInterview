@@ -7,22 +7,29 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 
 # ------------------------------------
 # 密码哈希配置
 # ------------------------------------
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(plain_password: str) -> str:
     """将明文密码转化为 bcrypt 哈希。"""
-    return pwd_context.hash(plain_password)
+    salt = bcrypt.gensalt()
+    pwd_bytes = plain_password.encode('utf-8')
+    hashed_bytes = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed_bytes.decode('utf-8')
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """校验明文密码是否匹配哈希。"""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode('utf-8'),
+            hashed_password.encode('utf-8')
+        )
+    except Exception:
+        return False
 
 
 # ------------------------------------
